@@ -666,8 +666,6 @@ int main(){
     ac57.label = "ac57";
     ac57.arestas = {{"ac56", 10}, {"ag21", 10}};
     graph.push_back(ac57);
-
-    auto start = std::chrono::high_resolution_clock::now();
     
     vector<string> resultado = dijkstra_algorithm(graph, "ic1_1", "ac57");
     
