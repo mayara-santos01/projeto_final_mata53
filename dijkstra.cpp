@@ -4,13 +4,20 @@
 #include <set>
 #include <utility>
 #include <climits>
+#include <ctime>
 using namespace std;
 
+//Estrutura de dados que é utilizada para a criação do grafo inicial 
 struct Vertice{
+    //O rótulo do vértice
     string label;
+    //Lista que contém as arestas, compostas pelo rótulo do vértice
+    //E pela largura de banda do link entre os dois vértices
     vector<pair<string, int>> arestas;
 };
 
+//Estrutura de dados utilizada para gerenciamento dos nós
+//Durante a execução do algortimo
 struct Node{
     string label;
     int distancia_ate_raiz;
@@ -19,22 +26,28 @@ struct Node{
     int arestas_visitadas = 0;
 };
 
+//Os parâmetros da função são o grafo, o rótulo do vértice de origm e o rótulo do vértice de destino
 vector<string> dijkstra_algorithm(vector<Vertice> grafo, string root, string destino){
-    vector<Node> vetor_resultado;
     vector<Node> vetor_iteracao;
+    vector<Node> vetor_resultado;
     vector<string> caminho;
     int contador = 0;
     
     //Construindo a lista inicial 
     for (int i=0; i<grafo.size(); i++){ //O(n)
+        //Definimos a distância de todos os vértices até a raíz como infinito
         int distancia = INT_MAX;
         for (int j=0; j<grafo[i].arestas.size(); j++){ //O(m)
             if (grafo[i].arestas[j].first == root){
+                //Se o vértice de origem for adjacente ao nó analisado, mudamos a distância inicial
                 distancia = grafo[i].arestas[j].second;
                 cout<<"Distancia ate a raiz "<<i<<" "<<grafo[i].label<<" "<<root<<" "<<distancia<<endl;
             }
         }
-       if (distancia < INT_MAX){
+        //Se o nó for adjacente à raiz, criamos um vértice
+        //para adicionarmos no grafo que será manipulado pelo algoritmo
+        //com a distância obtida
+        if (distancia < INT_MAX){
             Node no_atual;
             no_atual.label = grafo[i].label;
             no_atual.distancia_ate_raiz = distancia;
@@ -42,44 +55,48 @@ vector<string> dijkstra_algorithm(vector<Vertice> grafo, string root, string des
             for (int k = 0; k < grafo[i].arestas.size(); k++){ // O(m)
                 no_atual.arestas.push_back(make_pair(grafo[i].arestas[k].first, grafo[i].arestas[k].second));
             }
-            vetor_resultado.push_back(no_atual);
+            vetor_iteracao.push_back(no_atual);
         }
         else if (grafo[i].label != root){           
-        Node no_atual1;
-        no_atual1.label = grafo[i].label;
-        no_atual1.distancia_ate_raiz = distancia;
-        no_atual1.no_anterior = "None";
-        for (int k = 0; k < grafo[i].arestas.size(); k++){
-            no_atual1.arestas.push_back(make_pair(grafo[i].arestas[k].first, grafo[i].arestas[k].second));
-        }
-        vetor_resultado.push_back(no_atual1);
+            Node no_atual1;
+            no_atual1.label = grafo[i].label;
+            no_atual1.distancia_ate_raiz = INT_MAX;
+            no_atual1.no_anterior = "None";
+            for (int k = 0; k < grafo[i].arestas.size(); k++){
+                no_atual1.arestas.push_back(make_pair(grafo[i].arestas[k].first, grafo[i].arestas[k].second));
+            }
+            vetor_iteracao.push_back(no_atual1);
             
        }
             
         // Custo do loop: O(m+n)
     }
     
-    //for (Node no : vetor_resultado){
+    //for (Node no : vetor_iteracao){
     //    cout<<no.label<<" ";
     //}
     //cout<<endl;
     
     //Executando o algortimo de Dijkstra
-    //for (int x=1; x < vetor_resultado.size(); x++){
-    while (!vetor_resultado.empty()){
+    //for (int x=1; x < vetor_iteracao.size(); x++){
+    while (!vetor_iteracao.empty()){
         // Criação de um vetor para inserir vértices do inner_core
+        //que é incialziado como vazio durante o começo de cada iteração
         vector<pair<int, int>> vertices_innercore;
         int distancia = INT_MAX; 
         int menor_indice = -1;
-        for (int i=0; i < vetor_resultado.size(); i++){
-            if (vetor_resultado[i].distancia_ate_raiz < distancia){
-                distancia = vetor_resultado[i].distancia_ate_raiz;
+        for (int i=0; i < vetor_iteracao.size(); i++){
+            if (vetor_iteracao[i].distancia_ate_raiz < distancia){
+                //Selecionando o vértice com menor distância até a raiz
+                distancia = vetor_iteracao[i].distancia_ate_raiz;
+                //Armazenando o índice do vértice de menor distância
                 menor_indice = i;
             }
-            if (vetor_resultado[i].label[0] == 'i'){
-                // Preenchendo o vetor que reune vertices do iner_core
+            //Verificando se o vértice faz parte do inner_core
+            if (vetor_iteracao[i].label[0] == 'i' && vetor_iteracao[i].distancia_ate_raiz < INT_MAX){
+                // Preenchendo o vetor que reúne vertices do iner_core
                 // com as distancias e os indices
-                vertices_innercore.push_back(make_pair(vetor_resultado[i].distancia_ate_raiz, i));
+                vertices_innercore.push_back(make_pair(vetor_iteracao[i].distancia_ate_raiz, i));
             }
         }
         // A prioridade é selecionar vértices do inner_core por permitirem
@@ -93,68 +110,69 @@ vector<string> dijkstra_algorithm(vector<Vertice> grafo, string root, string des
                 }
             }
         }
-        cout<<"pivo "<<vetor_resultado[menor_indice].label<<endl;
-        // vetor_resultado[menor_indice] é o pivô da iteração
-        for (int j=0; j < vetor_resultado[menor_indice].arestas.size(); j++){ //O(m)
-            string vizinho_atual = vetor_resultado[menor_indice].arestas[j].first;
+        cout<<"pivo "<<vetor_iteracao[menor_indice].label<<endl;
+        // vetor_iteracao[menor_indice] é o pivô da iteração
+        for (int j=0; j < vetor_iteracao[menor_indice].arestas.size(); j++){ //O(m)
+            string vizinho_atual = vetor_iteracao[menor_indice].arestas[j].first;
             cout<<"Analisando "<<vizinho_atual<<endl;
             // Procurar o vértice que tem o label do vizinho que estamos analisando
-            for (int k=0; k < vetor_resultado.size(); k++){ //O(n)
-                if ((vetor_resultado[k].label == vizinho_atual) && (vetor_resultado[k].label != root)){
-                    int distancia_atual = vetor_resultado[k].distancia_ate_raiz;
+            for (int k=0; k < vetor_iteracao.size(); k++){ //O(n)
+                if ((vetor_iteracao[k].label == vizinho_atual) && (vetor_iteracao[k].label != root)){
+                    int distancia_atual = vetor_iteracao[k].distancia_ate_raiz;
                     // O segundo elemento da soma é o peso da aresta entre o pivô e seu adjacente analisado
-                    int distancia_proposta = vetor_resultado[menor_indice].distancia_ate_raiz + vetor_resultado[menor_indice].arestas[j].second;
+                    int distancia_proposta = vetor_iteracao[menor_indice].distancia_ate_raiz + vetor_iteracao[menor_indice].arestas[j].second;
                     cout<<distancia_atual<<" "<<distancia_proposta<<endl;
-                    cout<<"Comparando distancias "<<vetor_resultado[menor_indice].distancia_ate_raiz<<" "<< vetor_resultado[menor_indice].arestas[j].second<<endl;
+                    cout<<"Comparando distancias "<<vetor_iteracao[menor_indice].distancia_ate_raiz<<" "<< vetor_iteracao[menor_indice].arestas[j].second<<endl;
                     if (distancia_atual > distancia_proposta){
-                        vetor_resultado[k].distancia_ate_raiz = distancia_proposta;
-                        vetor_resultado[k].no_anterior = vetor_resultado[menor_indice].label;
+                        vetor_iteracao[k].distancia_ate_raiz = distancia_proposta;
+                        vetor_iteracao[k].no_anterior = vetor_iteracao[menor_indice].label;
                     }
                     
                 }
             }
             
         }
-        vetor_iteracao.push_back(vetor_resultado[menor_indice]);
-        vetor_resultado.erase(vetor_resultado.begin() + menor_indice);
+        vetor_resultado.push_back(vetor_iteracao[menor_indice]);
+        vetor_iteracao.erase(vetor_iteracao.begin() + menor_indice);
     }
     
     // Custo total do loop: O(m+n)
     
     
     
-    /*for (int i=0; i<vetor_iteracao.size(); i++){
-        cout<<"*** Vertice "<<vetor_iteracao[i].label<<" "<<vetor_iteracao[i].distancia_ate_raiz<<" ***"<<endl;
+    /*for (int i=0; i<vetor_resultado.size(); i++){
+        cout<<"*** Vertice "<<vetor_resultado[i].label<<" "<<vetor_resultado[i].distancia_ate_raiz<<" ***"<<endl;
         cout<<"Arestas"<<endl;
-        for(int k = 0; k < vetor_iteracao[i].arestas.size(); k++){
-            cout<<vetor_iteracao[i].arestas[k].first<<" "<<vetor_iteracao[i].arestas[k].second<<endl;
+        for(int k = 0; k < vetor_resultado[i].arestas.size(); k++){
+            cout<<vetor_resultado[i].arestas[k].first<<" "<<vetor_resultado[i].arestas[k].second<<endl;
         }
         cout<<endl;
     }*/
     int indice = 0;
     // Encontrar o indice do vetor que tem o vértice de destino
-    for (int j=0; j<vetor_iteracao.size(); j++){
-        if (vetor_iteracao[j].label == destino){
+    for (int j=0; j<vetor_resultado.size(); j++){
+        if (vetor_resultado[j].label == destino){
             indice = j;
             break;
             }
         } 
     string vertice_anterior;
     cout<<indice<<endl;
-    caminho.push_back(vetor_iteracao[indice].label);
+    caminho.push_back(vetor_resultado[indice].label);
     int x=0;
     while (true){
-        if (vetor_iteracao[indice].no_anterior == root){
+        //Se o nó anterior for a raiz, podemos encerrar o processamento
+        if (vetor_resultado[indice].no_anterior == root){
             caminho.push_back(root);
             break;
         }
-        for (int j=0; j<vetor_iteracao.size(); j++){
+        for (int j=0; j<vetor_resultado.size(); j++){
             // Se estamos analisando o vertice anterior ao vertice do indice
             // a posicao dele passa a ser o novo indice
-            if (vetor_iteracao[j].label == vetor_iteracao[indice].no_anterior){
+            if (vetor_resultado[j].label == vetor_resultado[indice].no_anterior){
                 indice = j;
                 // Armazenando o vértice no vetor de caminho
-                vertice_anterior = vetor_iteracao[indice].label;                
+                vertice_anterior = vetor_resultado[indice].label;                
                 cout<<"vertice analisado "<<vertice_anterior<<endl;
 
                 caminho.push_back(vertice_anterior);
@@ -174,6 +192,9 @@ vector<string> dijkstra_algorithm(vector<Vertice> grafo, string root, string des
 
 
 int main(){
+    // Marca o tempo de início
+    clock_t start = clock();
+    
     vector<Vertice> graph;
     
     Vertice ic1_1;
@@ -645,13 +666,25 @@ int main(){
     ac57.label = "ac57";
     ac57.arestas = {{"ac56", 10}, {"ag21", 10}};
     graph.push_back(ac57);
-        
+
+    auto start = std::chrono::high_resolution_clock::now();
+    
     vector<string> resultado = dijkstra_algorithm(graph, "ic1_1", "ac57");
     
-    cout<<"*** Caminho ***"<<endl;
+    cout<<"*** Caminho entre os vértices ici1_1 e ac57***"<<endl;
     for (string elem : resultado){
         cout<<elem<<" ";
     }
+
+    // Marca o tempo de término
+    clock_t end = clock();
+
+    // Calcula a duração
+    double duration = double(end - start) / CLOCKS_PER_SEC;
+
+    // Exibe o tempo de execução em segundos
+    cout<<"Tempo de execução: "<<duration<<" segundos"<<endl;
+
 
     return 0;
 }
