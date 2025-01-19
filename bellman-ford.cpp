@@ -50,6 +50,9 @@ unordered_map<string, int> bellman_ford(vector<Vertice>& graph, const string& ra
 }
 
 int main() {
+  // Marca o tempo de início
+  clock_t start = clock();
+  
   vector<Vertice> graph;
 
   Vertice ic1_1;
@@ -540,6 +543,15 @@ int main() {
   } catch (const runtime_error& e) {
     cout << e.what() << endl;
   }
+
+  // Marca o tempo de término
+  clock_t end = clock();
+
+  // Calcula a duração
+  double duration = double(end - start) / CLOCKS_PER_SEC;
+
+  // Exibe o tempo de execução em segundos
+  cout<<"Tempo de execução: "<<duration<<" segundos"<<endl;
 
   return 0;
 }
