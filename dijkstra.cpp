@@ -669,7 +669,7 @@ int main(){
     
     vector<string> resultado = dijkstra_algorithm(graph, "ic1_1", "ac57");
     
-    cout<<"*** Caminho entre os vértices ici1_1 e ac57***"<<endl;
+    cout<<"*** Caminho entre os vértices ici1_1 e ac57 ***"<<endl;
     for (string elem : resultado){
         cout<<elem<<" ";
     }
