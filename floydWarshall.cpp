@@ -608,12 +608,12 @@ int main() {
         vertex_indices[graph[i].label] = i;
     }
 
-    pair<vector<vector<int>>, vector<vector<int>>> matrices = create_distance_matrix(graph, vertex_indices); //cria as matrizes de distancia e predecessores
+    pair<vector<vector<int>>, vector<vector<int>>> matrices = create_distance_matrix(graph, vertex_indices); 
     vector<vector<int>> distance_matrix = matrices.first;
     vector<vector<int>> predecessor_matrix = matrices.second;
 
-    floydWarshall(distance_matrix, predecessor_matrix, graph, vertex_indices); //executa floyd-Warshall
-    vector<int> path = reconstructPath(vertex_indices["ic1_1"], vertex_indices["ac57"], predecessor_matrix); //caminho entre os vértices
+    floydWarshall(distance_matrix, predecessor_matrix, graph, vertex_indices); 
+    vector<int> path = reconstructPath(vertex_indices["ic1_1"], vertex_indices["ac57"], predecessor_matrix); 
 
     //imprime o resultado
     cout << "\nPeso entre ic1_1 e ac57: ";
