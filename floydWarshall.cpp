@@ -2,29 +2,32 @@
 #include <vector>
 #include <climits>
 #include <unordered_map>
-#include <algorithm> 
+#include <algorithm>
 #include <ctime>
 using namespace std;
 
-//Estrutura de dados utilizada para a criação do grafo inicial 
+//Estrutura de dados utilizada para a criação do grafo inicial
 struct Vertice {
     string label;
     vector<pair<string, int>> arestas;
 };
 
 //Matriz de distância inicial
-vector<vector<int>> create_distance_matrix(const vector<Vertice>& graph,const unordered_map<string, int>& vertex_indices) {
+pair<vector<vector<int>>, vector<vector<int>>> create_distance_matrix(const vector<Vertice>& graph, const unordered_map<string, int>& vertex_indices) {
     int num_vertices = graph.size();
-    vector<vector<int>> distance_matrix(num_vertices, vector<int>(num_vertices, INT_MAX));
+    vector<vector<int>> distance_matrix(num_vertices, vector<int>(num_vertices, INT_MAX)); // INT_MAX indica que não existe aresta entre os vértices
+    vector<vector<int>> predecessor_matrix(num_vertices, vector<int>(num_vertices, -1)); // -1 indica ausência de predecessor direto
 
     for (int i = 0; i < num_vertices; i++) {
         distance_matrix[i][i] = 0;
+        predecessor_matrix[i][i] = i;
         for (const auto& edge : graph[i].arestas) {
             int j = vertex_indices.at(edge.first);
             distance_matrix[i][j] = edge.second;
+            predecessor_matrix[i][j] = i; 
         }
     }
-    return distance_matrix;
+    return make_pair(distance_matrix, predecessor_matrix);
 }
 
 //Buscando ciclos negativos
@@ -35,7 +38,7 @@ bool detectaCicloNegativo(const vector<vector<int>>& dist) {
     return false;
 }
 
-//Imprimir matriz 
+//Imprimir matriz
 void imprimirMatriz(const vector<vector<int>>& matriz) {
     for (const auto& linha : matriz) {
         for (int valor : linha) {
@@ -49,8 +52,22 @@ void imprimirMatriz(const vector<vector<int>>& matriz) {
     }
 }
 
+//Reconstruir o caminho
+vector<int> reconstructPath(int start, int end, const vector<vector<int>>& predecessors) {
+    vector<int> path;
+    if (predecessors[start][end] == -1) return path;
+    int current = end;
+    while (current != start) {
+        path.push_back(current);
+        current = predecessors[start][current];
+    }
+    path.push_back(start);
+    reverse(path.begin(), path.end());
+    return path;
+}
+
 //Algoritmo floyd-Warshall
-void floydWarshall(vector<vector<int>>& dist, const vector<Vertice>& graph, const unordered_map<string, int>& vertex_indices) {
+void floydWarshall(vector<vector<int>>& dist, vector<vector<int>>& pred, const vector<Vertice>& graph, const unordered_map<string, int>& vertex_indices) {
     int n = dist.size();
 
     //Verificando se o vértice faz parte do inner_core
@@ -60,40 +77,45 @@ void floydWarshall(vector<vector<int>>& dist, const vector<Vertice>& graph, cons
             inner_core_indices.push_back(vertex_indices.at(vertex.label));
         }
     }
+    
+    for (int k_inner : inner_core_indices) { //Prioriza inner core
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (dist[i][k_inner] != INT_MAX && dist[k_inner][j] != INT_MAX && dist[i][k_inner] + dist[k_inner][j] < dist[i][j]) {
+                    dist[i][j] = dist[i][k_inner] + dist[k_inner][j];
+                    pred[i][j] = pred[k_inner][j];
+                }
+            }
+        }
+    }
+    for (int k = 0; k < n; k++) { //vértices restantes
+        bool is_inner_core = false;
+        for (int k_inner : inner_core_indices) {
+            if (k_inner == k) {
+                is_inner_core = true;
+                break;
+            }
+        }
+        if (is_inner_core) continue;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (dist[i][k] != INT_MAX && dist[k][j] != INT_MAX && dist[i][k] + dist[k][j] < dist[i][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                    pred[i][j] = pred[k][j];
+                }
+            }
+        }
+    }
 
-    //Executar floydWarshall caso não exista ciclo negativo
-    if (!detectaCicloNegativo) {
+    //Testa a existencia de ciclos negativos
+    if (detectaCicloNegativo(dist)) {
         cout << "\n Ciclo negativo detectado! Não é possivel encontrar o caminho mais curto." << endl;
         return;
     } else {
-        for (int k_inner : inner_core_indices) { //Prioriza inner core
-            for (int i = 0; i < n; i++) {
-                for (int j = 0; j < n; j++) {
-                    if (dist[i][k_inner] != INT_MAX && dist[k_inner][j] != INT_MAX && dist[i][k_inner] + dist[k_inner][j] < dist[i][j]) {
-                        dist[i][j] = dist[i][k_inner] + dist[k_inner][j];
-                    }
-                }
-            }
-        }
-        for (int k = 0; k < n; k++) { //Passagem normal para os vértices restantes
-            bool is_inner_core = false;
-            for (int k_inner : inner_core_indices){
-                if (k_inner == k){
-                    is_inner_core = true;
-                    break;
-                }
-            }
-            if (is_inner_core) continue;
-            for (int i = 0; i < n; i++) {
-                for (int j = 0; j < n; j++) {
-                    if (dist[i][k] != INT_MAX && dist[k][j] != INT_MAX && dist[i][k] + dist[k][j] < dist[i][j]) {
-                        dist[i][j] = dist[i][k] + dist[k][j];
-                    }
-                }
-            }
-        }
-        cout << "Matriz de distâncias dos caminhos mais curtos:" << endl;
+        cout << "Matriz de distâncias dos caminhos mais curtos:\n" << endl;
         imprimirMatriz(dist);
+        cout << "\nMatriz de Predecessores:\n" << endl;
+        imprimirMatriz(pred);
     }
 }
 
@@ -580,22 +602,38 @@ int main() {
     ac57.label = "ac57";
     ac57.arestas = {{"ac56", 10}, {"ag21", 10}};
     graph.push_back(ac57);
-    
+
     unordered_map<string, int> vertex_indices;
     for (int i = 0; i < graph.size(); i++) {
         vertex_indices[graph[i].label] = i;
     }
-    
-    vector<vector<int>> distance_matrix = create_distance_matrix(graph,vertex_indices);
-    floydWarshall(distance_matrix, graph,vertex_indices);
 
-    cout << "\nCaminho entre ic1_1 e ac57: ";
-    if (distance_matrix[vertex_indices["ic1_1"]][vertex_indices["ac57"]] == INT_MAX) {
-        cout << "INF" << endl;
+    pair<vector<vector<int>>, vector<vector<int>>> matrices = create_distance_matrix(graph, vertex_indices); //cria as matrizes de distancia e predecessores
+    vector<vector<int>> distance_matrix = matrices.first;
+    vector<vector<int>> predecessor_matrix = matrices.second;
+
+    floydWarshall(distance_matrix, predecessor_matrix, graph, vertex_indices); //executa floyd-Warshall
+    vector<int> path = reconstructPath(vertex_indices["ic1_1"], vertex_indices["ac57"], predecessor_matrix); //caminho entre os vértices
+
+    //imprime o resultado
+    cout << "\nPeso entre ic1_1 e ac57: ";
+    if ((distance_matrix[vertex_indices["ic1_1"]][vertex_indices["ac57"]] == INT_MAX) || (path.empty())) {
+        cout << "Não há caminho entre ic1_1 e ac57" << endl;
     } else {
         cout << distance_matrix[vertex_indices["ic1_1"]][vertex_indices["ac57"]] << endl;
+        
+        cout << "Caminho: ";
+        for (int vertex_index : path) {
+            for (const auto& pair : vertex_indices)
+            {
+                if (pair.second == vertex_index)
+                    cout << pair.first;
+            }
+            cout << " -> ";
+        }
+           cout << "Fim" << endl;
     }
-    
+
     //Marca o tempo de término
     clock_t end = clock();
 
