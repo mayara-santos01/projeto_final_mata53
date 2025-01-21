@@ -1,114 +1,115 @@
-#include <climits>
 #include <iostream>
-#include <string>
 #include <vector>
+#include <queue>
+#include <limits>
+#include <climits>
+#include <algorithm>
 
 using namespace std;
 
-// Estrutura de dados para representar um vértice
 struct Vertice {
     string label;
     vector<pair<string, int>> arestas;
 };
 
-// Função para executar o algoritmo de Bellman-Ford com prioridade para vértices "ic"
-bool bellman_ford(vector<Vertice> grafo, string raiz, string destino, vector<string>& caminho) {
-    // Inicialização
-    vector<int> d(grafo.size(), INT_MAX);
-    vector<int> predecessor(grafo.size(), -1);
+struct Node {
+    string label;
+    int distancia_ate_raiz;
+    string no_anterior;
+    vector<pair<string, int>> arestas;
+};
 
-    // Mapeando os índices dos vértices para facilitar a busca
-    vector<string> labels;
-    for (auto& vertice : grafo) {
-        labels.push_back(vertice.label);
-    }
-
-    auto find_index = [&labels](const string& label) {
-        for (int i = 0; i < labels.size(); i++) {
-            if (labels[i] == label) {
-                return i;
-            }
-        }
-        return -1;  // Não encontrado
-    };
-
-    int s_idx = find_index(raiz);
-    if (s_idx == -1) {
-        cout << "Vértice inicial não encontrado." << endl;
-        return false;
-    }
-
-    d[s_idx] = 0;
+vector<string> bellman_ford_algorithm(vector<Vertice> grafo, string root, string destino) {
+    vector<Node> vetor_iteracao;
+    vector<Node> vetor_resultado;
+    vector<string> caminho;
 
     // Construindo a lista inicial
-    for (int i = 0; i < grafo.size(); i++) {
-        // Definimos a distância de todos os vértices até a raíz como infinito
-        int distancia = INT_MAX;
-        for (int j = 0; j < grafo[i].arestas.size(); j++) {
-            if (grafo[i].arestas[j].first == raiz) {
-                // Se o vértice de origem for adjacente ao nó analisado, mudamos a distância inicial
-                distancia = grafo[i].arestas[j].second;
-                cout << "Distancia ate a raiz " << i << " " << grafo[i].label << " " << raiz << " " << distancia << endl;
-            }
-        }
+    for (const auto& vertice : grafo) {
+        Node no_atual;
+        no_atual.label = vertice.label;
+        no_atual.distancia_ate_raiz = (vertice.label == root) ? 0 : INT_MAX;
+        no_atual.no_anterior = "None";
+        no_atual.arestas = vertice.arestas;
+        vetor_iteracao.push_back(no_atual);
     }
 
-    // Passos do algoritmo
-    for (int i = 1; i < grafo.size(); i++) {
-        for (auto& vertice : grafo) {
-            int u_idx = find_index(vertice.label);
-            for (auto& aresta : vertice.arestas) {
-                int v_idx = find_index(aresta.first);
-                int peso = aresta.second;
+    // Executando o algoritmo de Bellman-Ford
+    for (int i = 0; i < vetor_iteracao.size() - 1; i++) {
+        for (int j = 0; j < vetor_iteracao.size(); j++) {
+            Node& no_atual = vetor_iteracao[j];
 
-                // Se ambos os vértices têm prefixo "ic", reduzimos o peso da aresta
-                if (vertice.label.substr(0, 2) == "ic" && aresta.first.substr(0, 2) == "ic") {
-                    peso /= 2;
+            // Verificar adjacências do vértice atual
+            for (const auto& aresta : no_atual.arestas) {
+                string vizinho_label = aresta.first;
+                int peso_aresta = aresta.second;
+
+                // Penalidade reduzida para conexões entre vértices "inner core"
+                if (no_atual.label[0] == 'i' && vizinho_label[0] == 'i') {
+                    peso_aresta = 0;
                 }
 
-                if (d[u_idx] != INT_MAX && d[v_idx] > d[u_idx] + peso) {
-                    d[v_idx] = d[u_idx] + peso;
-                    predecessor[v_idx] = u_idx;
-                    cout << "Atualizando distância de " << labels[u_idx] << " para " << d[v_idx] << endl;
+                // Relaxamento da aresta
+                for (auto& vizinho : vetor_iteracao) {
+                    if (vizinho.label == vizinho_label && no_atual.distancia_ate_raiz != INT_MAX) {
+                        int nova_distancia = no_atual.distancia_ate_raiz + peso_aresta;
+                        if (nova_distancia < vizinho.distancia_ate_raiz) {
+                            vizinho.distancia_ate_raiz = nova_distancia;
+                            vizinho.no_anterior = no_atual.label;
+                        }
+                    }
                 }
             }
         }
     }
 
     // Verificação de ciclos negativos
-    for (auto& vertice : grafo) {
-        int u_idx = find_index(vertice.label);
-        for (auto& aresta : vertice.arestas) {
-            int v_idx = find_index(aresta.first);
-            int peso = aresta.second;
+    for (const auto& no_atual : vetor_iteracao) {
+        for (const auto& aresta : no_atual.arestas) {
+            string vizinho_label = aresta.first;
+            int peso_aresta = aresta.second;
 
-            // Se ambos os vértices têm prefixo "ic", reduzimos o peso da aresta
-            if (vertice.label.substr(0, 2) == "ic" && aresta.first.substr(0, 2) == "ic") {
-                peso /= 2;
+            if (no_atual.label[0] == 'i' && vizinho_label[0] == 'i') {
+                peso_aresta = 0;
             }
 
-            if (d[u_idx] != INT_MAX && d[v_idx] > d[u_idx] + peso) {
-                cout << "O grafo contém um ciclo de peso negativo." << endl;
-                return false;
+            for (const auto& vizinho : vetor_iteracao) {
+                if (vizinho.label == vizinho_label && no_atual.distancia_ate_raiz != INT_MAX &&
+                    no_atual.distancia_ate_raiz + peso_aresta < vizinho.distancia_ate_raiz) {
+                    cout << "O grafo contém um ciclo de peso negativo" << endl;
+                    return caminho;
+                }
             }
         }
     }
 
-    // Construção do caminho
-    int destino_idx = find_index(destino);
-    if (destino_idx == -1) {
-        cout << "Destino não encontrado." << endl;
-        return false;
+    // Reconstruindo o caminho
+    string atual = destino;
+    while (atual != root && atual != "None") {
+        caminho.push_back(atual);
+        auto it = find_if(vetor_iteracao.begin(), vetor_iteracao.end(), [&](const Node& no) {
+            return no.label == atual;
+        });
+        if (it == vetor_iteracao.end()) break;
+        atual = it->no_anterior;
     }
 
-    int atual = destino_idx;
-    while (atual != -1) {
-        caminho.push_back(labels[atual]);
-        atual = predecessor[atual];
+    if (atual == root) {
+        caminho.push_back(root);
     }
 
-    return true;
+    reverse(caminho.begin(), caminho.end());
+
+    // Imprimindo o caminho detalhado
+    cout << "*** Caminho entre os vértices " << root << " e " << destino << " ***" << endl;
+    for (const auto& vertice : caminho) {
+        cout << vertice << " ";
+    }
+    cout << endl;
+
+    return caminho;
 }
+
 
 int main() {
     // Marca o tempo de início
@@ -589,17 +590,8 @@ int main() {
     ac57.arestas = {{"ac56", 10}, {"ag21", 10}};
     graph.push_back(ac57);
 
-    vector<string> caminho;
-    if (bellman_ford(graph, "ic1_1", "ac57", caminho)) {
-        cout << "Caminho encontrado: ";
-        for (auto& v : caminho) {
-            cout << v << " ";
-        }
-        cout << endl;
-    } else {
-        cout << "Não foi possível encontrar um caminho." << endl;
-    }
-
+    vector<string> resultado = bellman_ford_algorithm(graph, "ic1_1", "ac57");
+    
     // Marca o tempo de término
     clock_t end = clock();
 
